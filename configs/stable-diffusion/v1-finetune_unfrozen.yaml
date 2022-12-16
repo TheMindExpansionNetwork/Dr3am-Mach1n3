@@ -1,18 +1,18 @@
 model:
-  base_learning_rate: 1.0e-06
+  base_learning_rate: 1.0e-04
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
-    reg_weight: 1.0
+    parameterization: "v"
     linear_start: 0.00085
     linear_end: 0.0120
     num_timesteps_cond: 1
     log_every_t: 200
     timesteps: 1000
-    first_stage_key: image
-    cond_stage_key: caption
+    first_stage_key: "jpg"
+    cond_stage_key: "txt"
     image_size: 64
     channels: 4
-    cond_stage_trainable: true   # Note: different from the one we trained before
+    cond_stage_trainable: false
     conditioning_key: crossattn
     monitor: val/loss_simple_ema
     scale_factor: 0.18215
@@ -40,10 +40,11 @@ model:
         attention_resolutions: [ 4, 2, 1 ]
         num_res_blocks: 2
         channel_mult: [ 1, 2, 4, 4 ]
-        num_heads: 8
+        num_head_channels: 64 # need to fix for flash-attn
         use_spatial_transformer: True
+        use_linear_in_transformer: True
         transformer_depth: 1
-        context_dim: 768
+        context_dim: 1024
         use_checkpoint: True
         legacy: False
 
@@ -53,9 +54,10 @@ model:
         embed_dim: 4
         monitor: val/rec_loss
         ddconfig:
+          #attn_type: "vanilla-xformers"
           double_z: true
           z_channels: 4
-          resolution: 512
+          resolution: 256
           in_channels: 3
           out_ch: 3
           ch: 128
@@ -71,7 +73,10 @@ model:
           target: torch.nn.Identity
 
     cond_stage_config:
-      target: ldm.modules.encoders.modules.FrozenCLIPEmbedder
+      target: ldm.modules.encoders.modules.FrozenOpenCLIPEmbedder
+      params:
+        freeze: True
+        layer: "penultimate"
 
 data:
   target: main.DataModuleFromConfig
